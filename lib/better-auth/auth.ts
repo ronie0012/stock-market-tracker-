@@ -16,14 +16,14 @@ export const getAuth = async () => {
     authInstance = betterAuth({
         database: mongodbAdapter(db as any),
         secret: process.env.BETTER_AUTH_SECRET,
-        baseURL: process.env.BETTER_AUTH_URL,
+        baseURL: process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000",
         emailAndPassword: {
             enabled: true,
             disableSignUp: false,
             requireEmailVerification: false,
             minPasswordLength: 8,
             maxPasswordLength: 128,
-            autoSignIn: true,
+            autoSignIn: false,
         },
         plugins: [nextCookies()],
     });
@@ -31,4 +31,24 @@ export const getAuth = async () => {
     return authInstance;
 }
 
-export const auth = await getAuth();
+// Create a lazy-loaded auth instance
+export const auth = {
+    api: {
+        getSession: async (options: any) => {
+            const authInstance = await getAuth();
+            return authInstance.api.getSession(options);
+        },
+        signUpEmail: async (options: any) => {
+            const authInstance = await getAuth();
+            return authInstance.api.signUpEmail(options);
+        },
+        signInEmail: async (options: any) => {
+            const authInstance = await getAuth();
+            return authInstance.api.signInEmail(options);
+        },
+        signOut: async (options: any) => {
+            const authInstance = await getAuth();
+            return authInstance.api.signOut(options);
+        }
+    }
+};

@@ -10,17 +10,78 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {useRouter} from "next/navigation";
+import { useState } from "react";
 import {Button} from "@/components/ui/button";
 import {LogOut} from "lucide-react";
 import NavItems from "@/components/NavItems";
-import {signOut} from "@/lib/actions/auth.actions";
+import { signOut as clientSignOut } from "@/lib/better-auth/client";
 
 const UserDropdown = ({ user, initialStocks }: {user: User, initialStocks: StockWithWatchlistStatus[]}) => {
     const router = useRouter();
+    const [isSigningOut, setIsSigningOut] = useState(false);
 
     const handleSignOut = async () => {
-        await signOut();
-        router.push("/sign-in");
+        if (isSigningOut) return; // Prevent multiple clicks
+        
+        try {
+            setIsSigningOut(true);
+            console.log('Attempting to sign out...');
+            
+            // Clear any local storage or session storage
+            if (typeof window !== 'undefined') {
+                localStorage.clear();
+                sessionStorage.clear();
+                console.log('Cleared local and session storage');
+            }
+            
+            // Call our custom signout API (more reliable than client-side)
+            try {
+                const response = await fetch('/api/signout', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const result = await response.json();
+                console.log('API sign out result:', result);
+                
+                if (!result.success) {
+                    console.error('API sign out failed:', result.error);
+                }
+            } catch (apiError) {
+                console.error('API signout failed:', apiError);
+            }
+            
+            // Try client-side signout as backup
+            try {
+                await clientSignOut();
+                console.log('Client-side sign out successful');
+            } catch (clientError) {
+                console.log('Client-side sign out failed:', clientError);
+            }
+            
+            // Clear all cookies manually on client side
+            if (typeof document !== 'undefined') {
+                document.cookie.split(";").forEach(function(c) { 
+                    document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+                });
+                console.log('Cleared all client-side cookies');
+            }
+            
+            console.log('Redirecting to sign-in page...');
+            
+            // Force immediate redirect without using router
+            window.location.replace("/sign-in");
+            
+        } catch (error) {
+            console.error('Sign out completely failed:', error);
+            // Even if everything fails, still redirect to sign-in
+            window.location.replace("/sign-in");
+        } finally {
+            setIsSigningOut(false);
+        }
     }
 
     return (
@@ -58,9 +119,13 @@ const UserDropdown = ({ user, initialStocks }: {user: User, initialStocks: Stock
                     </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-gray-600"/>
-                <DropdownMenuItem onClick={handleSignOut} className="text-gray-100 text-md font-medium focus:bg-transparent focus:text-yellow-500 transition-colors cursor-pointer">
+                <DropdownMenuItem 
+                    onClick={handleSignOut} 
+                    disabled={isSigningOut}
+                    className="text-gray-100 text-md font-medium focus:bg-transparent focus:text-yellow-500 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
                     <LogOut className="h-4 w-4 mr-2 hidden sm:block" />
-                    Logout
+                    {isSigningOut ? 'Signing out...' : 'Logout'}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="hidden sm:block bg-gray-600"/>
                 <nav className="sm:hidden">
