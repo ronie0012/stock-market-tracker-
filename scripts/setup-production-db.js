@@ -4,8 +4,8 @@ const { MongoClient } = require('mongodb');
 async function setupProductionDatabase() {
   console.log('🔧 Setting up production database...');
   
-  // You'll replace this with your MongoDB Atlas connection string
-  const PRODUCTION_MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://username:password@cluster.mongodb.net/stocks_app';
+  // Your MongoDB Atlas connection string
+  const PRODUCTION_MONGODB_URI = 'mongodb+srv://ronitwindows04_db_user:B1gUhjmj6VllWgvd@stock-tracker-cluster.rrbq3hb.mongodb.net/stocks_app?retryWrites=true&w=majority&appName=stock-tracker-cluster';
   
   try {
     console.log('📡 Connecting to MongoDB Atlas...');
